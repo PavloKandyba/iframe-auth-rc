@@ -7,26 +7,42 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
+
 // CORS in case you need
 app.use((req, res, next) => {
-  res.set('Access-Control-Allow-Origin', 'http://localhost:3000'); // Rocket.Chat URL, adjust as needed
+  res.set('Access-Control-Allow-Origin', 'http://Kandyba.rocket.chat'); // Rocket.Chat URL, adjust as needed
   res.set('Access-Control-Allow-Credentials', 'true');
 
   next();
 });
 
-const baseURL = 'http://localhost:3000'; // Rocket.Chat base URL, adjust as needed
-const yourPersonalAccessToken = '<YOUR_PERSONAL_ACCESS_TOKEN>'; // Replace with your actual token
-const yourAdminUserID = '<YOUR_ADMIN_USER_ID>'; // Replace with your admin user ID
+const baseURL = 'http://kandyba.rocket.chat'; // Rocket.Chat base URL, adjust as needed
+const yourPersonalAccessToken = 'AlTHWmACFLK1wEKIZv7cDy6UZvHQiKYykwIIE4GNmA6'; // Replace with your actual token
+const yourAdminUserID = '99jQmj4DPxsWeyL8v'; // Replace with your admin user ID
 
 const generateRandomUsername = () => {
-  // Implement logic to generate random usernames (e.g., using Math.random() and string manipulation)
-  return 'guest_user_' + Math.floor(Math.random() * 1000000); // Replace with actual implementation
+  // This example uses base-36 conversion to limit username length to 10 characters
+  return 'user' + Math.floor(Math.random() * 1000000000).toString(36).substring(0, 10);
 };
 
-const generateRandomPassword = () => {
-  // Implement logic to generate secure random passwords (e.g., using libraries like password-hash)
-  return 'random_password_123!'; // Replace with actual implementation
+const CHARACTERS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()-_+';
+
+const generateRandomPassword = (length = 12) => {
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+  }
+  return password;
+};
+
+const generateRandomEmail = () => {
+  // This example generates a temporary email address
+  return `useremail${Math.floor(Math.random() * 1000000000)}@example.com`;
+};
+
+const generateRandomName = () => {
+  // This example creates a name with "Guest User" prefix and a random number
+  return `name${Math.floor(Math.random() * 1000)}`;
 };
 
 // Handle SSO request
@@ -42,16 +58,24 @@ app.post('/sso', async (req, res) => {
   try {
     const username = generateRandomUsername();
     const password = generateRandomPassword();
+    const email = generateRandomEmail();
+    const name = generateRandomName();
 
-    await axios.post(`${baseURL}/api/v1/users.create`, {
-      username,
-      password,
-    }, {
-      headers: {
-        'X-Auth-Token': yourPersonalAccessToken,
-        'X-User-Id': yourAdminUserID,
+    await axios.post(
+      `${baseURL}/api/v1/users.create`,
+      {
+        username,
+        password,
+        email,
+        name,
       },
-    });
+      {
+        headers: {
+          'X-Auth-Token': yourPersonalAccessToken,
+          'X-User-Id': yourAdminUserID,
+        },
+      }
+    );
 
     // Login with created credentials
     const loginResponse = await axios.post(`${baseURL}/api/v1/login`, {
@@ -68,7 +92,7 @@ app.post('/sso', async (req, res) => {
         window.parent.postMessage({
           event: 'login-with-token',
           loginToken: '${authToken}'
-        }, 'http://localhost:3000'); // Rocket.Chat URL, adjust as needed
+        }, 'http://Kandyba.rocket.chat'); // Rocket.Chat URL, adjust as needed
       </script>`);
     } else {
       return res.sendStatus(500);
