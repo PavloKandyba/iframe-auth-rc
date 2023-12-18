@@ -1,103 +1,84 @@
-var express = require('express');
-var bodyParser = require('body-parser');
-var axios = require('axios');
-var fs = require('fs');
+const express = require('express');
+const bodyParser = require('body-parser');
+const axios = require('axios');
 
-var app = express();
+const app = express();
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 // CORS in case you need
 app.use((req, res, next) => {
-    res.set('Access-Control-Allow-Origin', 'http://localhost:3000'); // this is the rocket.chat URL
-    res.set('Access-Control-Allow-Credentials', 'true');
+  res.set('Access-Control-Allow-Origin', 'http://localhost:3000'); // Rocket.Chat URL, adjust as needed
+  res.set('Access-Control-Allow-Credentials', 'true');
 
-    next();
+  next();
 });
 
-// this is the endpoint configured as API URL
-app.post('/sso', function (req, res) {
-    // add your own app logic here to validate user session (check cookies, headers, etc)
+const baseURL = 'http://localhost:3000'; // Rocket.Chat base URL, adjust as needed
+const yourPersonalAccessToken = '<YOUR_PERSONAL_ACCESS_TOKEN>'; // Replace with your actual token
+const yourAdminUserID = '<YOUR_ADMIN_USER_ID>'; // Replace with your admin user ID
 
-    // if the user is not already logged in on your system, respond with a 401 status
-    var notLoggedIn = true;
-    if (notLoggedIn) {
-        return res.sendStatus(401);
-    }
+const generateRandomUsername = () => {
+  // Implement logic to generate random usernames (e.g., using Math.random() and string manipulation)
+  return 'guest_user_' + Math.floor(Math.random() * 1000000); // Replace with actual implementation
+};
 
-    // you can save the token on your database as well, if so just return it
-    // MongoDB - services.iframe.token
-    var savedToken = null;
-    if (savedToken) {
-        return res.json({
-            token: savedToken
-        });
-    }
+const generateRandomPassword = () => {
+  // Implement logic to generate secure random passwords (e.g., using libraries like password-hash)
+  return 'random_password_123!'; // Replace with actual implementation
+};
 
-    // if don't have the user created on rocket.chat end yet, you can now create it
-    var currentUsername = null;
-    if (!currentUsername) {
-        // Generate random credentials
-        var randomUsername = 'user' + Math.floor(Math.random() * 1000);
-        var randomPassword = 'pass' + Math.floor(Math.random() * 1000);
+// Handle SSO request
+app.post('/sso', async (req, res) => {
+  // Check user session (replace with your own logic)
+  const notLoggedIn = true;
 
-        // Use admin's personal access token and user ID for API call
-        var adminAuthToken = 'your_admin_personal_access_token';
-        var adminUserId = 'your_admin_user_id';
+  if (notLoggedIn) {
+    return res.sendStatus(401);
+  }
 
-        axios.post('http://localhost:3000/api/v1/users.create', {
-            username: randomUsername,
-            password: randomPassword,
-        }, {
-            headers: {
-                'X-Auth-Token': adminAuthToken,
-                'X-User-Id': adminUserId,
-            }
-        }).then(function (response) {
-            // after creation, log the user in to get the `authToken`
-            if (response.data.success) {
-                return axios.post('http://localhost:3000/api/v1/login', {
-                    username: randomUsername,
-                    password: randomPassword
-                });
-            }
-        }).then(function (response) {
-            if (response.data.status === 'success') {
-                // since this endpoint is loaded within the iframe, we need to communicate back to rocket.chat using `postMessage` API
-                res.set('Content-Type', 'text/html');
-                res.send(`<script>
-                    window.parent.postMessage({
-                        event: 'login-with-token',
-                        loginToken: '${response.data.data.authToken}'
-                    }, 'http://localhost:3000'); // rocket.chat's URL
-                </script>`);
-            }
-        }).catch(function (error) {
-            res.sendStatus(401);
-        });
+  // Attempt creating user (if needed)
+  try {
+    const username = generateRandomUsername();
+    const password = generateRandomPassword();
+
+    await axios.post(`${baseURL}/api/v1/users.create`, {
+      username,
+      password,
+    }, {
+      headers: {
+        'X-Auth-Token': yourPersonalAccessToken,
+        'X-User-Id': yourAdminUserID,
+      },
+    });
+
+    // Login with created credentials
+    const loginResponse = await axios.post(`${baseURL}/api/v1/login`, {
+      username,
+      password,
+    });
+
+    if (loginResponse.data.status === 'success') {
+      const authToken = loginResponse.data.data.authToken;
+
+      // Send login token to iframe via postMessage
+      res.set('Content-Type', 'text/html');
+      res.send(`<script>
+        window.parent.postMessage({
+          event: 'login-with-token',
+          loginToken: '${authToken}'
+        }, 'http://localhost:3000'); // Rocket.Chat URL, adjust as needed
+      </script>`);
     } else {
-        // otherwise, create a rocket.chat session using rocket.chat's API
-        axios.post('http://localhost:3000/api/v1/login', {
-            username: 'username-set-previously',
-            password: 'password-set-previously'
-        }).then(function (response) {
-            if (response.data.status === 'success') {
-                // since this endpoint is loaded within the iframe, we need to communicate back to rocket.chat using `postMessage` API
-                res.set('Content-Type', 'text/html');
-                res.send(`<script>
-                    window.parent.postMessage({
-                        event: 'login-with-token',
-                        loginToken: '${response.data.data.authToken}'
-                    }, 'http://localhost:3000'); // rocket.chat's URL
-                </script>`);
-            }
-        }).catch(function () {
-            res.sendStatus(401);
-        });
+      return res.sendStatus(500);
     }
+  } catch (error) {
+    console.error(error);
+    return res.sendStatus(500);
+  }
 });
 
-app.listen(3030, function () {
-    console.log('Example app listening on port 3030!');
+app.listen(3030, () => {
+  console.log('Example app listening on port 3030!');
 });
