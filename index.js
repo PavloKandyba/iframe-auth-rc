@@ -9,17 +9,18 @@ app.use(bodyParser.json());
 
 // CORS setup
 app.use((req, res, next) => {
-  res.set('Access-Control-Allow-Origin', 'https://kandyba.rocket.chat');
+  res.set('Access-Control-Allow-Origin', 'https://kandyba.rocket.chat'); // Adjust to your Rocket.Chat URL
   res.set('Access-Control-Allow-Credentials', 'true');
   next();
 });
 
-const baseURL = 'https://kandyba.rocket.chat';
-const yourPersonalAccessToken = 'AlTHWmACFLK1wEKIZv7cDy6UZvHQiKYykwIIE4GNmA6';
-const yourAdminUserID = '99jQmj4DPxsWeyL8v';
+const baseURL = 'https://kandyba.rocket.chat'; // Adjust to your Rocket.Chat URL
+const yourPersonalAccessToken = 'AlTHWmACFLK1wEKIZv7cDy6UZvHQiKYykwIIE4GNmA6'; // Replace with your actual token
+const yourAdminUserID = '99jQmj4DPxsWeyL8v'; // Replace with your actual admin user ID
 
 const generateRandomUsername = () => {
-  return 'user' + Math.floor(Math.random() * 1000000000).toString(36).substring(0, 10);
+  // Change username length as needed
+  return 'user' + Math.floor(Math.random() * 1000000000).toString(36).substring(0, 8);
 };
 
 const CHARACTERS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()-_+';
@@ -32,23 +33,18 @@ const generateRandomPassword = (length = 12) => {
   return password;
 };
 
+// Change email domain as needed
 const generateRandomEmail = () => {
   return `useremail${Math.floor(Math.random() * 1000000000)}@example.com`;
 };
 
 const generateRandomName = () => {
+  // Change name length as needed
   return `name${Math.floor(Math.random() * 1000)}`;
 };
 
-// Handle SSO request
-app.post('/sso', async (req, res) => {
-  // Check user session (replace with your own logic)
-  const notLoggedIn = true;
-
-  if (notLoggedIn) {
-    return res.sendStatus(401);
-  }
-
+// Handle SSO request (triggered here for automatic login)
+app.get('/sso', async (req, res) => {
   try {
     const username = generateRandomUsername();
     const password = generateRandomPassword();
@@ -74,7 +70,7 @@ app.post('/sso', async (req, res) => {
         window.parent.postMessage({
           event: 'login-with-token',
           loginToken: '${authToken}'
-        }, 'https://kandyba.rocket.chat'); // Rocket.Chat URL, adjust as needed
+        }, 'https://kandyba.rocket.chat'); // Adjust to your Rocket.Chat URL
       </script>`);
     } else {
       return res.sendStatus(500);
