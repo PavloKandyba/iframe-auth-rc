@@ -43,39 +43,18 @@ const generateRandomName = () => {
   return `name${Math.floor(Math.random() * 1000)}`;
 };
 
-// Redirect to /sso on root access
+// Redirect to /home on root access
 app.get('/', (req, res) => {
-  res.redirect('/sso');
+  res.redirect('/home');
 });
 
-// Handle SSO request (triggered here for automatic login)
-const checkUserExists = async (username, email) => {
-  const url = `${baseURL}/api/v1/users.getByNameOrEmail?username=${username}&email=${email}`;
-  try {
-    const response = await axios.get(url, {
-      headers: { 'X-Auth-Token': yourPersonalAccessToken }
-    });
-    return response.data.users.length > 0; // Check if any users found
-  } catch (error) {
-    console.error(error);
-    return false; // Assume user doesn't exist if check fails
-  }
-};
-
-app.get('/sso', async (req, res) => {
+// Handle  request (triggered here for automatic login)
+app.get('/home', async (req, res) => {
   try {
     const username = generateRandomUsername();
     const password = generateRandomPassword();
     const email = generateRandomEmail();
     const name = generateRandomName();
-
-    // Check if user already exists (optional)
-    const userExists = await checkUserExists(username, email);
-    if (userExists) {
-      // Handle existing user scenario (e.g., log warning, redirect to login)
-      console.warn(`User with username '${username}' or email '${email}' already exists`);
-      return res.redirect('/login');
-    }
 
     // Create user
     const userCreationResponse = await axios.post(
@@ -100,8 +79,6 @@ app.get('/sso', async (req, res) => {
           }, 'https://kandyba.rocket.chat'); // Adjust to your Rocket.Chat URL
         </script>`);
 
-        // Redirect to home with the token
-        return res.redirect(`/home`);
       } else {
         const errorMessage = loginResponse.data.error; // Extract specific error message
         console.error(`Login failed: ${errorMessage}`);
