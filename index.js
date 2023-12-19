@@ -1,52 +1,38 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
+const path = require('path');
 
 const app = express();
 
+// Middleware
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 // CORS setup
 app.use((req, res, next) => {
-  res.set('Access-Control-Allow-Origin', 'https://kandyba.rocket.chat'); // Adjust to your Rocket.Chat URL
+  res.set('Access-Control-Allow-Origin', 'https://kandyba.rocket.chat');
   res.set('Access-Control-Allow-Credentials', 'true');
   next();
 });
 
-const baseURL = 'https://kandyba.rocket.chat'; // Adjust to your Rocket.Chat URL
-const yourPersonalAccessToken = 'AlTHWmACFLK1wEKIZv7cDy6UZvHQiKYykwIIE4GNmA6'; // Replace with your actual token
-const yourAdminUserID = '99jQmj4DPxsWeyL8v'; // Replace with your actual admin user ID
+// Constants
+const baseURL = 'https://kandyba.rocket.chat';
+const yourPersonalAccessToken = 'AlTHWmACFLK1wEKIZv7cDy6UZvHQiKYykwIIE4GNmA6';
+const yourAdminUserID = '99jQmj4DPxsWeyL8v';
 
-const generateRandomUsername = () => {
-  // Change username length as needed
-  return 'user' + Math.floor(Math.random() * 1000000000).toString(36).substring(0, 8);
-};
-
-const CHARACTERS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()-_+';
-
+// Helper functions
+const generateRandomUsername = () => 'user' + Math.floor(Math.random() * 1000000000).toString(36).substring(0, 8);
 const generateRandomPassword = (length = 12) => {
   let password = '';
+  const CHARACTERS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()-_+';
   for (let i = 0; i < length; i++) {
     password += CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
   }
   return password;
 };
-
-// Change email domain as needed
-const generateRandomEmail = () => {
-  return `useremail${Math.floor(Math.random() * 1000000000)}@example.com`;
-};
-
-const generateRandomName = () => {
-  // Change name length as needed
-  return `name${Math.floor(Math.random() * 1000)}`;
-};
-
-// Redirect to /home on root access
-app.get('/', (req, res) => {
-  res.redirect('/home');
-});
+const generateRandomEmail = () => `useremail${Math.floor(Math.random() * 1000000000)}@example.com`;
+const generateRandomName = () => `name${Math.floor(Math.random() * 1000)}`;
 
 // Handle the /home request
 app.get('/home', async (req, res) => {
@@ -75,7 +61,7 @@ app.get('/home', async (req, res) => {
           window.parent.postMessage({
             event: 'login-with-token',
             loginToken: '${authToken}'
-          }, 'https://kandyba.rocket.chat'); // Adjust to your Rocket.Chat URL
+          }, 'https://kandyba.rocket.chat');
         </script>`;
 
         // Combine the script with home.html content and send as response
@@ -84,13 +70,7 @@ app.get('/home', async (req, res) => {
       } else {
         const errorMessage = loginResponse.data.error;
         console.error(`Login failed: ${errorMessage}`);
-
-        // Return specific error code based on error type (optional)
-        if (errorMessage === 'Username or password is incorrect') {
-          return res.status(401).send('Invalid username or password');
-        } else {
-          return res.sendStatus(500);
-        }
+        return res.sendStatus(500);
       }
     } else {
       return res.sendStatus(500);
