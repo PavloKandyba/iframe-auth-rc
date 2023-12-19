@@ -48,7 +48,7 @@ app.get('/', (req, res) => {
   res.redirect('/home');
 });
 
-// Handle  request (triggered here for automatic login)
+// Handle the /home request
 app.get('/home', async (req, res) => {
   try {
     const username = generateRandomUsername();
@@ -69,18 +69,20 @@ app.get('/home', async (req, res) => {
 
       if (loginResponse.data.status === 'success') {
         const authToken = loginResponse.data.data.authToken;
-        
+
         // Send login token via postMessage
-        res.set('Content-Type', 'text/html');
-        res.send(`<script>
+        const script = `<script>
           window.parent.postMessage({
             event: 'login-with-token',
             loginToken: '${authToken}'
           }, 'https://kandyba.rocket.chat'); // Adjust to your Rocket.Chat URL
-        </script>`);
+        </script>`;
+
+        // Combine the script with home.html content and send as response
+        res.sendFile(path.join(__dirname, 'home.html'), { additional: { script } });
 
       } else {
-        const errorMessage = loginResponse.data.error; // Extract specific error message
+        const errorMessage = loginResponse.data.error;
         console.error(`Login failed: ${errorMessage}`);
 
         // Return specific error code based on error type (optional)
