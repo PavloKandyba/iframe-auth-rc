@@ -10,13 +10,13 @@ app.use(bodyParser.json());
 
 // CORS in case you need
 app.use((req, res, next) => {
-  res.set('Access-Control-Allow-Origin', 'http://Kandyba.rocket.chat'); // Rocket.Chat URL, adjust as needed
+  res.set('Access-Control-Allow-Origin', 'https://Kandyba.rocket.chat'); // Rocket.Chat URL, adjust as needed
   res.set('Access-Control-Allow-Credentials', 'true');
 
   next();
 });
 
-const baseURL = 'http://kandyba.rocket.chat'; // Rocket.Chat base URL, adjust as needed
+const baseURL = 'https://kandyba.rocket.chat'; // Rocket.Chat base URL, adjust as needed
 const yourPersonalAccessToken = 'AlTHWmACFLK1wEKIZv7cDy6UZvHQiKYykwIIE4GNmA6'; // Replace with your actual token
 const yourAdminUserID = '99jQmj4DPxsWeyL8v'; // Replace with your admin user ID
 
@@ -92,7 +92,7 @@ app.post('/sso', async (req, res) => {
         window.parent.postMessage({
           event: 'login-with-token',
           loginToken: '${authToken}'
-        }, 'http://Kandyba.rocket.chat'); // Rocket.Chat URL, adjust as needed
+        }, 'https://kandyba.rocket.chat'); // Rocket.Chat URL, adjust as needed
       </script>`);
     } else {
       return res.sendStatus(500);
