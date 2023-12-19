@@ -43,19 +43,44 @@ const generateRandomName = () => {
   return `name${Math.floor(Math.random() * 1000)}`;
 };
 
+// Redirect to /sso on root access
+app.get('/', (req, res) => {
+  res.redirect('/sso');
+});
+
 // Handle SSO request (triggered here for automatic login)
-app.get('/sso', async (req, res) => {
-  try {
-    const username = generateRandomUsername();
-    const password = generateRandomPassword();
-    const email = generateRandomEmail();
-    const name = generateRandomName();
+const checkUserExists = async (username, email) => {
+    const url = `${baseURL}/api/v1/users.getByNameOrEmail?username=${username}&email=${email}`;
+    try {
+      const response = await axios.get(url, {
+        headers: { 'X-Auth-Token': process.env.YOUR_PERSONAL_ACCESS_TOKEN }
+      });
+      return response.data.users.length > 0; // Check if any users found
+    } catch (error) {
+      console.error(error);
+      return false; // Assume user doesn't exist if check fails
+    }
+  };
+  app.get('/sso', async (req, res) => {
+    try {
+      const username = generateRandomUsername();
+      const password = generateRandomPassword();
+      const email = generateRandomEmail();
+      const name = generateRandomName();
+  
+      // Check if user already exists (optional)
+      const userExists = await checkUserExists(username, email);
+      if (userExists) {
+        // Handle existing user scenario (e.g., log warning, redirect to login)
+        console.warn(`User with username '${username}' or email '${email}' already exists`);
+        return res.redirect('/login');
+      }
 
     // Create user
     await axios.post(
       `${baseURL}/api/v1/users.create`,
       { username, password, email, name },
-      { headers: { 'X-Auth-Token': yourPersonalAccessToken, 'X-User-Id': yourAdminUserID } }
+      { headers: { 'X-Auth-Token': process.env.YOUR_PERSONAL_ACCESS_TOKEN, 'X-User-Id': process.env.YOUR_ADMIN_USER_ID } }
     );
 
     // Login with created credentials
@@ -63,8 +88,18 @@ app.get('/sso', async (req, res) => {
 
     if (loginResponse.data.status === 'success') {
       const authToken = loginResponse.data.data.authToken;
+      } else {
+  const errorMessage = loginResponse.data.error; // Extract specific error message
+  console.error(`Login failed: ${errorMessage}`);
 
-      // Send login token to iframe via postMessage
+  // Return specific error code based on error type (optional)
+  if (errorMessage === 'Username or password is incorrect') {
+    return res.status(401).send('Invalid username or password');
+  } else {
+    return res.sendStatus(500);
+  }
+}
+      // Send login token via postMessage
       res.set('Content-Type', 'text/html');
       res.send(`<script>
         window.parent.postMessage({
@@ -72,6 +107,9 @@ app.get('/sso', async (req, res) => {
           loginToken: '${authToken}'
         }, 'https://kandyba.rocket.chat'); // Adjust to your Rocket.Chat URL
       </script>`);
+
+      // Redirect to home with the token
+      res.redirect(`/home`);
     } else {
       return res.sendStatus(500);
     }
