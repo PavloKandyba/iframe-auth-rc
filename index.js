@@ -50,66 +50,69 @@ app.get('/', (req, res) => {
 
 // Handle SSO request (triggered here for automatic login)
 const checkUserExists = async (username, email) => {
-    const url = `${baseURL}/api/v1/users.getByNameOrEmail?username=${username}&email=${email}`;
-    try {
-      const response = await axios.get(url, {
-        headers: { 'X-Auth-Token': process.env.YOUR_PERSONAL_ACCESS_TOKEN }
-      });
-      return response.data.users.length > 0; // Check if any users found
-    } catch (error) {
-      console.error(error);
-      return false; // Assume user doesn't exist if check fails
+  const url = `${baseURL}/api/v1/users.getByNameOrEmail?username=${username}&email=${email}`;
+  try {
+    const response = await axios.get(url, {
+      headers: { 'X-Auth-Token': yourPersonalAccessToken }
+    });
+    return response.data.users.length > 0; // Check if any users found
+  } catch (error) {
+    console.error(error);
+    return false; // Assume user doesn't exist if check fails
+  }
+};
+
+app.get('/sso', async (req, res) => {
+  try {
+    const username = generateRandomUsername();
+    const password = generateRandomPassword();
+    const email = generateRandomEmail();
+    const name = generateRandomName();
+
+    // Check if user already exists (optional)
+    const userExists = await checkUserExists(username, email);
+    if (userExists) {
+      // Handle existing user scenario (e.g., log warning, redirect to login)
+      console.warn(`User with username '${username}' or email '${email}' already exists`);
+      return res.redirect('/login');
     }
-  };
-  app.get('/sso', async (req, res) => {
-    try {
-      const username = generateRandomUsername();
-      const password = generateRandomPassword();
-      const email = generateRandomEmail();
-      const name = generateRandomName();
-  
-      // Check if user already exists (optional)
-      const userExists = await checkUserExists(username, email);
-      if (userExists) {
-        // Handle existing user scenario (e.g., log warning, redirect to login)
-        console.warn(`User with username '${username}' or email '${email}' already exists`);
-        return res.redirect('/login');
-      }
 
     // Create user
-    await axios.post(
+    const userCreationResponse = await axios.post(
       `${baseURL}/api/v1/users.create`,
       { username, password, email, name },
-      { headers: { 'X-Auth-Token': process.env.YOUR_PERSONAL_ACCESS_TOKEN, 'X-User-Id': process.env.YOUR_ADMIN_USER_ID } }
+      { headers: { 'X-Auth-Token': yourPersonalAccessToken, 'X-User-Id': yourAdminUserID } }
     );
 
-    // Login with created credentials
-    const loginResponse = await axios.post(`${baseURL}/api/v1/login`, { username, password });
+    if (userCreationResponse.data.success) {
+      // Login with created credentials
+      const loginResponse = await axios.post(`${baseURL}/api/v1/login`, { username, password });
 
-    if (loginResponse.data.status === 'success') {
-      const authToken = loginResponse.data.data.authToken;
+      if (loginResponse.data.status === 'success') {
+        const authToken = loginResponse.data.data.authToken;
+        
+        // Send login token via postMessage
+        res.set('Content-Type', 'text/html');
+        res.send(`<script>
+          window.parent.postMessage({
+            event: 'login-with-token',
+            loginToken: '${authToken}'
+          }, 'https://kandyba.rocket.chat'); // Adjust to your Rocket.Chat URL
+        </script>`);
+
+        // Redirect to home with the token
+        return res.redirect(`/home`);
       } else {
-  const errorMessage = loginResponse.data.error; // Extract specific error message
-  console.error(`Login failed: ${errorMessage}`);
+        const errorMessage = loginResponse.data.error; // Extract specific error message
+        console.error(`Login failed: ${errorMessage}`);
 
-  // Return specific error code based on error type (optional)
-  if (errorMessage === 'Username or password is incorrect') {
-    return res.status(401).send('Invalid username or password');
-  } else {
-    return res.sendStatus(500);
-  }
-}
-      // Send login token via postMessage
-      res.set('Content-Type', 'text/html');
-      res.send(`<script>
-        window.parent.postMessage({
-          event: 'login-with-token',
-          loginToken: '${authToken}'
-        }, 'https://kandyba.rocket.chat'); // Adjust to your Rocket.Chat URL
-      </script>`);
-
-      // Redirect to home with the token
-      res.redirect(`/home`);
+        // Return specific error code based on error type (optional)
+        if (errorMessage === 'Username or password is incorrect') {
+          return res.status(401).send('Invalid username or password');
+        } else {
+          return res.sendStatus(500);
+        }
+      }
     } else {
       return res.sendStatus(500);
     }
