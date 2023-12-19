@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Website with Rocket.Chat Chat</title>
+</head>
+<body>
+  <iframe src="https://kandyba.rocket.chat/channel/general/?layout=embedded" title="Rocket.Chat Chat"></iframe>
+  <script>
+    const iframe = document.querySelector('iframe');
+    iframe.onload = function () {
+      window.addEventListener('message', (event) => {
+        if (event.data && event.data.event === 'login-with-token') {
+          const loginToken = event.data.loginToken;
+          iframe.contentWindow.postMessage({
+            externalCommand: 'login-with-token',
+            loginToken: loginToken
+          }, '*');
+        }
+      });
+    };
+  </script>
+</body>
+</html>
