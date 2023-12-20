@@ -8,56 +8,86 @@ const rocketChatServer = 'https://kandyba.rocket.chat';
 const rocketChatAdminUserId = '99jQmj4DPxsWeyL8v';
 const rocketChatAdminAuthToken = 'AlTHWmACFLK1wEKIZv7cDy6UZvHQiKYykwIIE4GNmA6';
 
+// CORS middleware
+app.use((req, res, next) => {
+  res.set('Access-Control-Allow-Origin', 'https://kandyba.rocket.chat'); // Replace with your Rocket.Chat URL
+  res.set('Access-Control-Allow-Credentials', 'true');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE'); // Add the HTTP methods you need
+  res.set('Access-Control-Allow-Headers', 'Content-Type'); // Add the headers you need
+
+  next();
+});
+
+// Global error handler middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).send({ message: 'Internal Server Error' });
+});
 
 export async function fetchUser(username) {
-  const rocketChatUser = await request({
-    url: `${rocketChatServer}/api/v1/users.info`,
-    method: 'GET',
-    qs: {
-      username: username,
-    },
-    headers: {
-      'X-Auth-Token': rocketChatAdminAuthToken,
-      'X-User-Id': rocketChatAdminUserId,
-    },
-  });
-  return rocketChatUser;
+  try {
+    const rocketChatUser = await request({
+      url: `${rocketChatServer}/api/v1/users.info`,
+      method: 'GET',
+      qs: {
+        username: username,
+      },
+      headers: {
+        'X-Auth-Token': rocketChatAdminAuthToken,
+        'X-User-Id': rocketChatAdminUserId,
+      },
+    });
+    return rocketChatUser;
+  } catch (err) {
+    console.error('Error in fetchUser:', err);
+    throw err;
+  }
 }
 
 export async function loginUser(email, password) {
-  const response = await request({
-    url: `${rocketChatServer}/api/v1/login`,
-    method: 'POST',
-    json: {
-      user: email,
-      password: password,
-    },
-  });
-  return response;
+  try {
+    const response = await request({
+      url: `${rocketChatServer}/api/v1/login`,
+      method: 'POST',
+      json: {
+        user: email,
+        password: password,
+      },
+    });
+    return response;
+  } catch (err) {
+    console.error('Error in loginUser:', err);
+    throw err;
+  }
 }
 
 export async function createUser() {
-  const name = faker.name.findName();
-  const email = faker.internet.email();
-  const password = faker.internet.password();
-  const username = faker.internet.userName();
+  try {
+    const name = faker.name.findName();
+    const email = faker.internet.email();
+    const password = faker.internet.password();
+    const username = faker.internet.userName();
 
-  const rocketChatUser = await request({
-    url: `${rocketChatServer}/api/v1/users.create`,
-    method: 'POST',
-    json: {
-      name,
-      email,
-      password,
-      username,
-      verified: true,
-    },
-    headers: {
-      'X-Auth-Token': rocketChatAdminAuthToken,
-      'X-User-Id': rocketChatAdminUserId,
-    },
-  });
-  return rocketChatUser;
+    const rocketChatUser = await request({
+      url: `${rocketChatServer}/api/v1/users.create`,
+      method: 'POST',
+      json: {
+        name,
+        email,
+        password,
+        username,
+        verified: true,
+      },
+      headers: {
+        'X-Auth-Token': rocketChatAdminAuthToken,
+        'X-User-Id': rocketChatAdminUserId,
+      },
+    });
+    return rocketChatUser;
+  } catch (err) {
+    console.error('Error in createUser:', err);
+    throw err;
+  }
 }
 
 export async function createOrLoginUser() {
@@ -77,18 +107,19 @@ export async function createOrLoginUser() {
       // Perform login
       return await loginUser(user.email, user.password);
     } else {
+      console.error('Error in createOrLoginUser:', ex);
       throw ex;
     }
   }
 }
 
-//Creating API’s
-///login route
-app.post('/login', async (req, res) => {
+// Creating API’s
+/// login route
+app.post('/login', async (req, res, next) => {
   try {
     // Assuming you still want to store the user in the session
     req.session.user = await createOrLoginUser();
-    
+
     // Accessing the user from the session
     const user = req.session.user;
 
@@ -97,8 +128,8 @@ app.post('/login', async (req, res) => {
     await user.save(); // Saving the rocket.chat auth token and userId in the database
     res.send({ message: 'User Created Successfully' });
   } catch (ex) {
-    console.log('Rocket.chat user creation failed');
-    res.status(500).send({ message: 'Internal Server Error' });
+    console.error('Error in /login route:', ex);
+    next(ex);
   }
 });
 
