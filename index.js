@@ -1,86 +1,130 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const axios = require('axios');
-const path = require('path');
+import request from 'request-promise-native';
+import faker from 'faker'; // Added import for faker library
 
-const app = express();
+const rocketChatServer = 'https://kandyba.rocket.chat';
+const rocketChatAdminUserId = '99jQmj4DPxsWeyL8v';
+const rocketChatAdminAuthToken = 'AlTHWmACFLK1wEKIZv7cDy6UZvHQiKYykwIIE4GNmA6';
 
-// Middleware
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+export async function fetchUser(username) {
+  const rocketChatUser = await request({
+    url: `${rocketChatServer}/api/v1/users.info`,
+    method: 'GET',
+    qs: {
+      username: username,
+    },
+    headers: {
+      'X-Auth-Token': rocketChatAdminAuthToken,
+      'X-User-Id': rocketChatAdminUserId,
+    },
+  });
+  return rocketChatUser;
+}
 
-// CORS setup
-app.use((req, res, next) => {
-  res.set('Access-Control-Allow-Origin', 'https://kandyba.rocket.chat');
-  res.set('Access-Control-Allow-Credentials', 'true');
-  next();
-});
+export async function loginUser(email, password) {
+  const response = await request({
+    url: `${rocketChatServer}/api/v1/login`,
+    method: 'POST',
+    json: {
+      user: email,
+      password: password,
+    },
+  });
+  return response;
+}
 
-// Constants
-const baseURL = 'https://kandyba.rocket.chat';
-const yourPersonalAccessToken = 'AlTHWmACFLK1wEKIZv7cDy6UZvHQiKYykwIIE4GNmA6';
-const yourAdminUserID = '99jQmj4DPxsWeyL8v';
+export async function createUser() {
+  const name = faker.name.findName();
+  const email = faker.internet.email();
+  const password = faker.internet.password();
+  const username = faker.internet.userName();
 
-// Helper functions
-const generateRandomUsername = () => 'user' + Math.floor(Math.random() * 1000000000).toString(36).substring(0, 8);
-const generateRandomPassword = (length = 12) => {
-  let password = '';
-  const CHARACTERS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()-_+';
-  for (let i = 0; i < length; i++) {
-    password += CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
-  }
-  return password;
-};
-const generateRandomEmail = () => `useremail${Math.floor(Math.random() * 1000000000)}@example.com`;
-const generateRandomName = () => `name${Math.floor(Math.random() * 1000)}`;
+  const rocketChatUser = await request({
+    url: `${rocketChatServer}/api/v1/users.create`,
+    method: 'POST',
+    json: {
+      name,
+      email,
+      password,
+      username,
+      verified: true,
+    },
+    headers: {
+      'X-Auth-Token': rocketChatAdminAuthToken,
+      'X-User-Id': rocketChatAdminUserId,
+    },
+  });
+  return rocketChatUser;
+}
 
-// Handle the /home request
-app.get('/home', async (req, res) => {
+export async function createOrLoginUser() {
   try {
-    const username = generateRandomUsername();
-    const password = generateRandomPassword();
-    const email = generateRandomEmail();
-    const name = generateRandomName();
+    const username = faker.internet.userName();
+    const name = faker.name.findName();
+    const email = faker.internet.email();
+    const password = faker.internet.password();
 
-    // Create user
-    const userCreationResponse = await axios.post(
-      `${baseURL}/api/v1/users.create`,
-      { username, password, email, name },
-      { headers: { 'X-Auth-Token': yourPersonalAccessToken, 'X-User-Id': yourAdminUserID } }
-    );
-
-    if (userCreationResponse.data.success) {
-      // Login with created credentials
-      const loginResponse = await axios.post(`${baseURL}/api/v1/login`, { username, password });
-
-      if (loginResponse.data.status === 'success') {
-        const authToken = loginResponse.data.data.authToken;
-
-        // Send login token via postMessage
-        const script = `<script>
-          window.parent.postMessage({
-            event: 'login-with-token',
-            loginToken: '${authToken}'
-          }, 'https://kandyba.rocket.chat');
-        </script>`;
-
-        // Combine the script with home.html content and send as response
-        res.sendFile(path.join(__dirname, 'home.html'), { additional: { script } });
-
-      } else {
-        const errorMessage = loginResponse.data.error;
-        console.error(`Login failed: ${errorMessage}`);
-        return res.sendStatus(500);
-      }
+    const user = await fetchUser(username);
+    // Perform login
+    return await loginUser(email, password);
+  } catch (ex) {
+    if (ex.statusCode === 400) {
+      // User does not exist, creating user
+      const user = await createUser();
+      // Perform login
+      return await loginUser(user.email, user.password);
     } else {
-      return res.sendStatus(500);
+      throw ex;
     }
-  } catch (error) {
-    console.error(error);
-    return res.sendStatus(500);
+  }
+}
+
+//Creating API’s
+///login route
+app.post('/login', async (req, res) => {
+  try {
+    // const user = /* ... your logic to define the user */;
+    const response = await createOrLoginUser();
+    req.session.user = user; // Assuming you still want to store the user in the session
+    user.rocketchatAuthToken = response.data.authToken;
+    user.rocketchatUserId = response.data.userId;
+    await user.save(); // Saving the rocket.chat auth token and userId in the database
+    res.send({ message: 'User Created Successfully' });
+  } catch (ex) {
+    console.log('Rocket.chat user creation failed');
+    res.status(500).send({ message: 'Internal Server Error' });
   }
 });
 
-app.listen(3030, () => {
+// This method will be called by Rocket.chat to fetch the login token
+app.get('/auth_get', (req, res) => {
+  if (req.session.user && req.session.user.rocketchatAuthToken) {
+    res.send({ loginToken: req.session.user.rocketchatAuthToken }); // Fixed ctx to req
+    return;
+  } else {
+    res.status(401).json({ message: 'User not logged in' });
+    return;
+  }
+});
+
+// This method will be called by Rocket.chat to fetch the login token
+// and is used as a fallback
+app.get('/chat_iframe', (req, res) => {
+const rocketChatServer = 'https://kandyba.rocket.chat';
+  if (req.session.user && req.session.user.rocketchatAuthToken) {
+    // We are sending a script tag to the front-end with the RocketChat Auth Token that will be used to authenticate the user
+    return res.send(`<script>
+      window.parent.postMessage({
+        event: 'login-with-token',
+        loginToken: '${ req.session.user.rocketchatAuthToken }'
+      }, '${ rocketChatServer }');
+    </script>
+    `)
+    return;
+  } else {
+    return res.status(401).send('User not logged in')
+  }
+});
+
+app.listen(3030, function () {
   console.log('Example app listening on port 3030!');
 });
