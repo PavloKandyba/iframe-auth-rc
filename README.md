@@ -5,7 +5,7 @@ iFrame auth example app
 
 ```
 git clone https://github.com/RocketChat/Breadcrumbsiframe-auth-rc.git
-cd iframe-auth-example
+cd iframe-auth-rc
 npm install
 npm start
 ```
