@@ -1,6 +1,7 @@
 import express from 'express';
 import request from 'request-promise-native';
 import faker from 'faker';
+import path from 'path';
 
 const app = express(); // Create an express app
 
@@ -17,6 +18,9 @@ app.use((req, res, next) => {
 
   next();
 });
+
+// Serve static files from the 'public' folder
+app.use(express.static('public'));
 
 // Global error handler middleware
 app.use((err, req, res, next) => {
@@ -159,6 +163,11 @@ app.get('/chat_iframe', (req, res) => {
   } else {
     return res.status(401).send('User not logged in');
   }
+});
+
+// Catch-all route to serve the index.html file
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 const PORT = 3030;
