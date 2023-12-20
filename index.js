@@ -86,9 +86,12 @@ export async function createOrLoginUser() {
 ///login route
 app.post('/login', async (req, res) => {
   try {
-    // const user = /* ... your logic to define the user */;
-    const response = await createOrLoginUser();
-    req.session.user = user; // Assuming you still want to store the user in the session
+    // Assuming you still want to store the user in the session
+    req.session.user = await createOrLoginUser();
+    
+    // Accessing the user from the session
+    const user = req.session.user;
+
     user.rocketchatAuthToken = response.data.authToken;
     user.rocketchatUserId = response.data.userId;
     await user.save(); // Saving the rocket.chat auth token and userId in the database
