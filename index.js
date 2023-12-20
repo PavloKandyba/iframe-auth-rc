@@ -1,11 +1,13 @@
+import express from 'express';
 import request from 'request-promise-native';
-import faker from 'faker'; // Added import for faker library
+import faker from 'faker';
+
+const app = express(); // Create an express app
 
 const rocketChatServer = 'https://kandyba.rocket.chat';
 const rocketChatAdminUserId = '99jQmj4DPxsWeyL8v';
 const rocketChatAdminAuthToken = 'AlTHWmACFLK1wEKIZv7cDy6UZvHQiKYykwIIE4GNmA6';
-const express = require('express');
-const app = express();
+
 
 export async function fetchUser(username) {
   const rocketChatUser = await request({
@@ -100,7 +102,7 @@ app.post('/login', async (req, res) => {
 // This method will be called by Rocket.chat to fetch the login token
 app.get('/auth_get', (req, res) => {
   if (req.session.user && req.session.user.rocketchatAuthToken) {
-    res.send({ loginToken: req.session.user.rocketchatAuthToken }); // Fixed ctx to req
+    res.send({ loginToken: req.session.user.rocketchatAuthToken });
     return;
   } else {
     res.status(401).json({ message: 'User not logged in' });
@@ -111,23 +113,21 @@ app.get('/auth_get', (req, res) => {
 // This method will be called by Rocket.chat to fetch the login token
 // and is used as a fallback
 app.get('/chat_iframe', (req, res) => {
-const rocketChatServer = 'https://kandyba.rocket.chat';
+  const rocketChatServer = 'https://kandyba.rocket.chat';
   if (req.session.user && req.session.user.rocketchatAuthToken) {
     // We are sending a script tag to the front-end with the RocketChat Auth Token that will be used to authenticate the user
     return res.send(`<script>
       window.parent.postMessage({
         event: 'login-with-token',
-        loginToken: '${ req.session.user.rocketchatAuthToken }'
-      }, '${ rocketChatServer }');
-    </script>
-    `)
-    return;
+        loginToken: '${req.session.user.rocketchatAuthToken}'
+      }, '${rocketChatServer}');
+    </script>`);
   } else {
-    return res.status(401).send('User not logged in')
+    return res.status(401).send('User not logged in');
   }
 });
 
 const PORT = 3030;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Example app listening on port ${PORT}!`);
 });
