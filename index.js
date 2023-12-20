@@ -4,6 +4,8 @@ import faker from 'faker'; // Added import for faker library
 const rocketChatServer = 'https://kandyba.rocket.chat';
 const rocketChatAdminUserId = '99jQmj4DPxsWeyL8v';
 const rocketChatAdminAuthToken = 'AlTHWmACFLK1wEKIZv7cDy6UZvHQiKYykwIIE4GNmA6';
+const express = require('express');
+const app = express();
 
 export async function fetchUser(username) {
   const rocketChatUser = await request({
@@ -125,6 +127,7 @@ const rocketChatServer = 'https://kandyba.rocket.chat';
   }
 });
 
-app.listen(3030, function () {
-  console.log('Example app listening on port 3030!');
+const PORT = 3030;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
