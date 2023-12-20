@@ -161,7 +161,8 @@ app.get('/chat_iframe', (req, res) => {
         event: 'login-with-token',
         loginToken: '${req.session.user.rocketchatAuthToken}'
       }, '${rocketChatServer}');
-    </script>`);
+    </script>
+    <iframe id="myIframe" style="width: 100%; height: 100vh;"></iframe>`);
   } else {
     return res.status(401).send('User not logged in');
   }
