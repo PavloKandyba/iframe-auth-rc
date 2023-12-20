@@ -2,6 +2,8 @@ import express from 'express';
 import request from 'request-promise-native';
 import faker from 'faker';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const app = express(); // Create an express app
 
@@ -164,6 +166,10 @@ app.get('/chat_iframe', (req, res) => {
     return res.status(401).send('User not logged in');
   }
 });
+
+// Correct way to get the directory name using import.meta.url
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Catch-all route to serve the index.html file
 app.get('*', (req, res) => {
